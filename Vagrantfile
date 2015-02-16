@@ -171,59 +171,52 @@ SCRIPT
 
 VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-	config.vm.define "ps1auth-server" do |ps1auth|
-  ps1auth.vm.box = "archlinux-x86_64"
-  ps1auth.vm.box_url = "http://cloud.terry.im/vagrant/archlinux-x86_64.box"
-  ps1auth.vm.provision "shell", inline: $script
-  ps1auth.vm.network "forwarded_port", guest: 5555, host: 5555, auto_correct: true
-  ps1auth.vm.network "forwarded_port", guest: 8001, host: 8001, auto_correct: true
-  ps1auth.vm.network "forwarded_port", guest: 19531, host: 8002, auto_correct: true
-  ps1auth.vm.network "forwarded_port", guest: 389, host: 3389, auto_correct: true
-  ps1auth.vm.provider "virtualbox" do |v|
-    v.memory = 2048
-    v.cpus = 2
-  end
-	end
-# -*- mode: ruby -*-
-# vi: set ft=ruby :
-  #
-  # This is a Vagrant box that populates itself as a FreeIPA server. 
-  #
-  # DEPENDENCIES:
-  # vagrant-hosts vagrant plugin. Install with:
-  #   vagrant plugin install vagrant-hosts
 
-  config.vm.define "ipa-server" do |ipaserver| 
-	  ipaserver.vm.box = "vStone/centos-7.x-puppet.3.x"
 
-	  # The hostname MUST match the main IP address of the host, and be specified
-	  # as such in /etc/hosts. As such, this Vagrantfile depends on the 
-	  # vagrant-hosts plugin.
-	  ipaserver.vm.hostname = "freeipa.example.org"
-	  ipaserver.vm.network "private_network", ip: "192.168.65.4"
-	  ipaserver.vm.provision :hosts do |provisioner|
-		  provisioner.add_host '192.168.65.4', ['freeipa.example.org']
-	  end
-	  ipaserver.vm.provision "shell", inline: <<-SHELL
+	config.vm.define "ipa-server" do |ipaserver| 
+		ipaserver.vm.box = "vStone/centos-7.x-puppet.3.x"
+
+		# The hostname MUST match the main IP address of the host, and be specified
+		# as such in /etc/hosts. As such, this Vagrantfile depends on the 
+		# vagrant-hosts plugin.
+		ipaserver.vm.hostname = "freeipa.example.org"
+		ipaserver.vm.network "private_network", ip: "192.168.65.4"
+		ipaserver.vm.provision :hosts do |provisioner|
+			provisioner.add_host '192.168.65.4', ['freeipa.example.org']
+		end
+		ipaserver.vm.provision "shell", inline: <<-SHELL
 		sed -i 's/127.0.1.1.*freeipa.example.org.*//' /etc/hosts
-	  SHELL
+		SHELL
 
 
-	  # Forwarding interesting ports from 
-	  # http://docs.fedoraproject.org/en-US/Fedora/15/html/FreeIPA_Guide/installing-ipa.html#tab.ipa-ports:
-	  # Web UI:
-	  ipaserver.vm.network "forwarded_port", guest: 443, host: 4443
-	  # LDAP:
-	  ipaserver.vm.network "forwarded_port", guest: 389, host: 13389
+		# Forwarding interesting ports from 
+		# http://docs.fedoraproject.org/en-US/Fedora/15/html/FreeIPA_Guide/installing-ipa.html#tab.ipa-ports:
+		# Web UI:
+		ipaserver.vm.network "forwarded_port", guest: 443, host: 4443
+		# LDAP:
+		ipaserver.vm.network "forwarded_port", guest: 389, host: 13389
 
-	  # And install freeipa:
-	  ipaserver.vm.provision "shell", inline: <<-SHELL
+		# And install freeipa:
+		ipaserver.vm.provision "shell", inline: <<-SHELL
 		puppet module install huit/ipa
-	  SHELL
-	  ipaserver.vm.provision "puppet" do |puppet|
-		  puppet.manifest_file = "default.pp"
-	  end
-  end
+		SHELL
+		ipaserver.vm.provision "puppet" do |puppet|
+			puppet.manifest_file = "default.pp"
+		end
+	end
+	config.vm.define "ps1auth-server" do |ps1auth|
+		ps1auth.vm.box = "archlinux-x86_64"
+		ps1auth.vm.box_url = "http://cloud.terry.im/vagrant/archlinux-x86_64.box"
+		ps1auth.vm.provision "shell", inline: $script
+		ps1auth.vm.network "forwarded_port", guest: 5555, host: 5555, auto_correct: true
+		ps1auth.vm.network "forwarded_port", guest: 8001, host: 8001, auto_correct: true
+		ps1auth.vm.network "forwarded_port", guest: 19531, host: 8002, auto_correct: true
+		ps1auth.vm.network "forwarded_port", guest: 389, host: 3389, auto_correct: true
+		ps1auth.vm.provider "virtualbox" do |v|
+			v.memory = 2048
+			v.cpus = 2
+		end
+	end
 end
 
 
