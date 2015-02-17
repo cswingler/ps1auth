@@ -3,11 +3,11 @@
 
 $script = <<SCRIPT
 # Set Environment Variables
-export AD_URL="ldap://localhost"
-export AD_DOMAIN="VAGRANT"
-export AD_BASEDN="CN=Users,DC=vagrant,DC=lan"
-export AD_BINDDN="Administrator@VAGRANT"
-export AD_BINDDN_PASSWORD="aeng3Oog"
+export AD_URL="ldap://freeipa.example.org"
+export AD_DOMAIN="EXAMPLE.ORG"
+export AD_BASEDN="CN=Users,DC=example,DC=org"
+export AD_BINDDN="cn=Directory Administrator"
+export AD_BINDDN_PASSWORD="password"
 export SECRET_KEY="deesohshoayie6PiGoGaghi6thiecaingai2quab2aoheequ8vahsu1phu8ahJio"
 export ZOHO_AUTHTOKEN="add-your-auth-token"
 export PAYPAL_RECEIVER_EMAIL="money@vagrant.lan"
@@ -194,7 +194,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 		# Web UI:
 		ipaserver.vm.network "forwarded_port", guest: 443, host: 4443
 		# LDAP:
-		ipaserver.vm.network "forwarded_port", guest: 389, host: 13389
+		ipaserver.vm.network "forwarded_port", guest: 389, host: 3389
 
 		# And install freeipa:
 		ipaserver.vm.provision "shell", inline: <<-SHELL
@@ -207,11 +207,16 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 	config.vm.define "ps1auth-server" do |ps1auth|
 		ps1auth.vm.box = "archlinux-x86_64"
 		ps1auth.vm.box_url = "http://cloud.terry.im/vagrant/archlinux-x86_64.box"
+		# Set up a private network on the same net as the freeipa box
+		ps1auth.vm.network "private_network", ip: "192.168.65.5"
+		ps1auth.vm.provision :hosts do |provisioner|
+			provisioner.add_host '192.168.65.4', ['freeipa.example.org']
+		end
+
 		ps1auth.vm.provision "shell", inline: $script
 		ps1auth.vm.network "forwarded_port", guest: 5555, host: 5555, auto_correct: true
 		ps1auth.vm.network "forwarded_port", guest: 8001, host: 8001, auto_correct: true
 		ps1auth.vm.network "forwarded_port", guest: 19531, host: 8002, auto_correct: true
-		ps1auth.vm.network "forwarded_port", guest: 389, host: 3389, auto_correct: true
 		ps1auth.vm.provider "virtualbox" do |v|
 			v.memory = 2048
 			v.cpus = 2

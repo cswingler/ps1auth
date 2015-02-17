@@ -1,5 +1,13 @@
-P1 Member Access System
-========================
+P1 Member Access System - The SSH:C Fork
+========================================
+
+About this fork
+---------------
+
+Basically, this sets up a FreeIPA server alongside the ps1auth box.
+It's configured to talk to it, but hasn't been tested past that. It all boots,
+that's all I've tested so far. -- @cswingler.
+ 
 
 Getting Started with Vagrant
 ============================
