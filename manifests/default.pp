@@ -11,6 +11,16 @@ package { 'epel-release':
   ensure => installed
 }
 
+package { 'haveged':
+  ensure => present,
+  require => File['/etc/yum.repos.d/epel.repo']
+}
+
+service { 'haveged':
+  ensure => running,
+  require => Package['haveged'],
+}
+
 file { '/etc/yum.repos.d/epel.repo':
   ensure => present,
   content => '[epel]

@@ -195,6 +195,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 		ipaserver.vm.network "forwarded_port", guest: 443, host: 4443
 		# LDAP:
 		ipaserver.vm.network "forwarded_port", guest: 389, host: 3389
+                ipaserver.vm.provider "virtualbox" do |v|
+                  v.memory = 1024
+                  v.cpus = 1
+                end
 
 		# And install freeipa:
 		ipaserver.vm.provision "shell", inline: <<-SHELL
