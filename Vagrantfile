@@ -76,7 +76,7 @@ EOF
 # PS1Auth Systemd Service File
 cat << EOF > /etc/systemd/system/ps1auth.service
 [Unit]
-Description=PS1 Auth (Member's site)
+Description=PS1 Auth (Members site)
 After=vboxservice.service
 
 [Service]
@@ -222,7 +222,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 		ps1auth.vm.network "forwarded_port", guest: 8001, host: 8001, auto_correct: true
 		ps1auth.vm.network "forwarded_port", guest: 19531, host: 8002, auto_correct: true
 		ps1auth.vm.provider "virtualbox" do |v|
-			v.memory = 2048
+			v.memory = 1024
 			v.cpus = 2
 		end
 	end
