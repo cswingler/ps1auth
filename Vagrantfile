@@ -24,13 +24,13 @@ EOF
 locale-gen
 
 # Install Dependencies 
-sudo pacman -S --noconfirm --needed postgresql python2-virtualenv samba nginx
-yaourt -Sy --noconfirm --aur rabbitmq
+pacman -S --noconfirm --needed postgresql python2-virtualenv samba nginx
+sudo -u vagrant yaourt -Sy --noconfirm --aur rabbitmq
 
 # Setup Samba
-sudo samba-tool domain provision --realm=vagrant.lan --domain=${AD_DOMAIN} --server-role=dc --use-rfc2307 --adminpass=${AD_BINDDN_PASSWORD}
-sudo systemctl start samba
-sudo systemctl enable samba
+samba-tool domain provision --realm=vagrant.lan --domain=${AD_DOMAIN} --server-role=dc --use-rfc2307 --adminpass=${AD_BINDDN_PASSWORD}
+systemctl start samba
+systemctl enable samba
 
 # Set Shell Environment Variables
 cat << EOF >> .bashrc
@@ -48,8 +48,8 @@ EOF
 #  Setup Database
 chmod 755 /home/vagrant
 sudo -u postgres initdb --locale en_US.UTF-8 -D '/var/lib/postgres/data'
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
+systemctl start postgresql
+systemctl enable postgresql
 sudo -u postgres createuser --superuser vagrant
 sudo -u vagrant createdb ps1auth
 
@@ -227,5 +227,3 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 		end
 	end
 end
-
-
