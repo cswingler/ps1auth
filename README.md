@@ -12,7 +12,10 @@ that's all I've tested so far. -- @cswingler.
 Getting Started with Vagrant
 ============================
 
+    ```
     vagrant up
+    vagrant plugin install vagrant-hosts
+    ```
 
 Creating a user
 ===============
