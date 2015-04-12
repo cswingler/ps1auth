@@ -1,62 +1,76 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from .backends import PS1Backend, get_ldap_connection
-import ldap
+from ldap3 import BASE, MODIFY_ADD, MODIFY_REPLACE, ALL_ATTRIBUTES, LEVEL
+from ldap3.utils.conv import escape_bytes
+from ldap3.utils.dn import escape_attribute_value
+from ldap3.core.exceptions import LDAPBindError
 from django.conf import settings
 import uuid
 from django.core.cache import cache
-import ldap.modlist
-from pprint import pprint
 
 class PS1UserManager(BaseUserManager):
-        
+
     def create_user(self, username, email = None, first_name = None, last_name = None, password = None):
-        user_dn = "CN={0},{1}".format(username, settings.AD_BASEDN)
-        user_attrs = {}
-        user_attrs['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
-        user_attrs['cn'] = username
-        user_attrs['userPrincipalName'] = username + '@' + settings.AD_DOMAIN
-        user_attrs['sAMAccountName'] = username
+        dn = "CN={0},{1}".format(username, settings.AD_BASEDN)
+        object_class = ['top', 'person', 'organizationalPerson', 'user']
+        attributes = {
+            'cn':  username,
+            'userPrincipalName': username + '@' + settings.AD_DOMAIN,
+            'sAMAccountName': username,
+            'userAccountControl': '514',
+        }
+
+        # Our forms will always define these, but django gets unhappy if you require 
+        # more than a username and password
         if first_name:
-            user_attrs['givenName'] = first_name
+            attributes['givenName'] = first_name
         if last_name:
-            user_attrs['sn'] = last_name
-        user_attrs['userAccountControl'] = '514'
+            attributes['sn'] = last_name
         if email:
-            user_attrs['mail'] = email
-        user_ldif = ldap.modlist.addModlist(user_attrs)
+            attributes['mail'] = email
 
         # prep account enable
-        enable_account = [(ldap.MOD_REPLACE, 'userAccountControl', '512')]
+        enable_account_changelist = {
+            'userAccountControl': (MODIFY_REPLACE, ['512'])
+        }
 
         ldap_connection = get_ldap_connection()
 
         # add the user to AD
-        result = ldap_connection.add_s(user_dn, user_ldif)
+        with ldap_connection as c:
+            c.add(dn, object_class, attributes)
+
 
         #now get the user guid
-        filter_string = r'sAMAccountName={0}'.format(username)
-        result = ldap_connection.search_ext_s(settings.AD_BASEDN, ldap.SCOPE_ONELEVEL, filterstr=filter_string)
-        ldap_user = result[0][1]
-        guid = uuid.UUID(bytes_le=ldap_user['objectGUID'][0])
+        with ldap_connection as c:
+            c.search(dn, '(objectClass=*)', BASE, attributes=['objectGUID'])
+            response = c.response
+
+        guid_bytes = response[0]['attributes']['objectGUID'][0]
+        guid = uuid.UUID(bytes_le=guid_bytes)
+
         user = PS1Backend().get_user(guid)
         user.save()
-        
+
         #set password
         if password:
             user.set_password(password)
-            
+
         #turn the account on
-        result = ldap_connection.modify_s(user_dn, enable_account)
+        with ldap_connection as c:
+            c.modify(dn, enable_account_changelist)
+            response = c.response
+            result = c.result
         user._expire_ldap_data()
         return user
-    
+
     def delete_user(self, user):
         l = get_ldap_connection()
         user_dn = user.ldap_user['distinguishedName'][0]
-        result = l.delete_s(user_dn)
+        result = l.delete(user_dn)
         user.delete()
-        
+
     def create_superuser(self, object_guid, password, email = None):
         """
         object_guid is actually a username. calling it object_guid gets around
@@ -65,21 +79,27 @@ class PS1UserManager(BaseUserManager):
         user = self.create_user(object_guid, email=email, password=password)
         admins_dn = "CN={0},{1}".format("Domain Admins", settings.AD_BASEDN)
         user_dn = user.ldap_user['distinguishedName'][0]
-        add_member = [(ldap.MOD_ADD, 'member', user_dn)]
-        l = get_ldap_connection()
-        l.modify_s(admins_dn, add_member)
+
+        add_to_group_changelist = {
+            'member': (MODIFY_ADD, [user_dn])
+        }
+
+        with get_ldap_connection() as c:
+            c.modify(admins_dn, add_to_group_changelist)
+
         user._expire_ldap_data()
         return user
 
     def get_users_by_field(self, field, value):
-        l = get_ldap_connection()
-        filter_string = "({0}={1})".format(field, value)
-        #HEFTODO build user result directly
-        result = l.search_s(settings.AD_BASEDN, ldap.SCOPE_ONELEVEL, filterstr=filter_string)
+        escaped_value = escape_attribute_value(value)
+        filter_string = "({0}={1})".format(field, escaped_value)
+        with get_ldap_connection() as c:
+            c.search(settings.AD_BASEDN, filter_string, LEVEL, attributes=['objectGUID'])
+            result = c.response
         backend = PS1Backend()
         users = []
         for ldap_user in result:
-            guid = uuid.UUID(bytes_le=(ldap_user[1]['objectGUID'][0]))
+            guid = uuid.UUID(bytes_le=(ldap_user['attributes']['objectGUID'][0]))
             users.append(backend.get_user(str(guid)))
         return users
 
@@ -100,8 +120,8 @@ class PS1User(AbstractBaseUser):
     USERNAME_FIELD = 'object_guid'
 
     def get_full_name(self):
-	if not self.ldap_user:
-	     return repr(self)
+        if not self.ldap_user:
+            return repr(self)
         try:
             first_name = self.ldap_user['givenName'][0]
             last_name = self.ldap_user['sn'][0]
@@ -110,33 +130,33 @@ class PS1User(AbstractBaseUser):
         return ("{0} {1}").format(first_name, last_name)
 
     def get_short_name(self):
-	if self.ldap_user:
-		return self.ldap_user['cn'][0]
-	else:
-		return "AD User Set, but not found"
+        if self.ldap_user:
+            return self.ldap_user['cn'][0]
+        else:
+            return "AD User Set, but not found"
 
     def check_password(self, raw_password):
-        # HEFTODO strict check
-        ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_ALLOW)
-        l = ldap.initialize(settings.AD_URL)
-        l.set_option(ldap.OPT_PROTOCOL_VERSION, 3)
-        username = self.ldap_user['sAMAccountName'][0]
-        binddn = "{0}@{1}".format(username,  settings.AD_DOMAIN)
+        username = self.ldap_user['userPrincipalName'][0]
         try:
-            l.simple_bind_s(binddn, raw_password)
+            get_ldap_connection(username, raw_password)
             return True
-        except ldap.INVALID_CREDENTIALS:
+        except LDAPBindError:
             return False
 
     def set_password(self, raw_password):
         l = get_ldap_connection()
-        #unicode_pass = unicode('"' + raw_password + '"', 'iso-8859-1')
-        unicode_pass = '"' + raw_password + '"'
-        password_value = unicode_pass.encode('utf-16-le')
-        add_pass = [(ldap.MOD_REPLACE, 'unicodePwd', [password_value])]
-        user_dn = self.ldap_user['distinguishedName'][0]
-        l.modify_s(user_dn, add_pass)
+        password_value=  '"{}"'.format(raw_password).encode('utf-16-le')
         
+        password_changes = {
+            'unicodePwd':  (MODIFY_REPLACE,[password_value])
+        }
+
+        dn = self.ldap_user['distinguishedName'][0]
+        with get_ldap_connection() as c:
+            c.modify(dn, password_changes)
+            response = c.response
+            result = c.result
+
     def set_unusable_password(self):
         raise NotImplementedError
 
@@ -180,21 +200,23 @@ class PS1User(AbstractBaseUser):
             # certain byte sequences contain printable character that can
             # potentially be parseable by the query string.  Escape each byte as
             # hex to make sure this doesn't happen.
-            restrung = ''.join(['\\%02x' % ord(x) for x in guid.bytes_le])
-            filter_string = r'(objectGUID={0})'.format(restrung)
-            l = get_ldap_connection()
-            result = l.search_ext_s(settings.AD_BASEDN, ldap.SCOPE_ONELEVEL, filterstr=filter_string)
+            #restrung = ''.join(['\\%02x' % ord(x) for x in guid.bytes_le])
+            filter_string = '(objectGUID={})'.format(escape_bytes(guid.bytes_le))
+            with get_ldap_connection() as c:
+                c.search(settings.AD_BASEDN, filter_string, LEVEL, attributes = ALL_ATTRIBUTES)
+                result = c.response
+
             if len(result) > 0:
-		    self._ldap_user = result[0][1]
-		    cache.set(self.object_guid, self._ldap_user, 24 * 60 * 60 * 70)
+                self._ldap_user = result[0]['attributes']
+                cache.set(self.object_guid, self._ldap_user, 24 * 60 * 60 * 70)
         return self._ldap_user
-    
+
     def _expire_ldap_data(self):
         if hasattr(self, '_ldap_user'):
             del(self._ldap_user)
         cache.delete(self.object_guid)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.get_short_name()
 
 def gen_uuid():

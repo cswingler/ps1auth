@@ -17,6 +17,6 @@ class Transaction(models.Model):
     # The following is a PS:One account balance, not a user balance
     balance = MoneyField(max_digits=10, decimal_places=2)
 
-    def __unicode__(self)
+    def __str__(self)
         return 'id=%s, timestamp=%s, type=%s, from_email=%s, to_email=%s, name=%s, status=%s, amount=%s, fee=%s, net=%s, balance=%s' % (
         self.id, self.timestamp, self.type, self.from_email, self.to_email, self.name, self.status, self.amount, self.fee_amount, self.net_amount, self.balance)

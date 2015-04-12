@@ -55,7 +55,7 @@ class Person(models.Model):
     updated_on = models.DateTimeField(auto_now=True)
     objects = PersonManager()
 
-    def __unicode__(self):
+    def __str__(self):
         return u'{0} {1}'.format(self.first_name, self.last_name)
 
     def get_full_name(self):
@@ -78,7 +78,7 @@ class IDCheck(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return "ID Check for {} performed by {}".format(self.person, self.user)
 
 class CRMPaymentMethod(models.Model):
@@ -127,31 +127,31 @@ class EmailRecordManager(models.Manager):
             email_message.attach_alternative(html_content, "text/html")
             email_message.mixed_subtype = 'related'
 
-            # attachements
-            for attachment in attachments:
-                email_message.attach(attachment)
+        # attachements
+        for attachment in attachments:
+            email_message.attach(attachment)
 
-            # Record the email
-            email_record = EmailRecord(
-                subject=subject,
-                message = email_message.message(),
-                from_email = from_email,
-                to_email = to_person.email,
-                recipient = to_person,
-                sender = user,
-            )
+        # Record the email
+        email_record = EmailRecord(
+            subject=subject,
+            message = email_message.message(),
+            from_email = from_email,
+            to_email = to_person.email,
+            recipient = to_person,
+            sender = user,
+        )
+        email_record.save()
+
+        # Send
+        try:
+            email_message.send(fail_silently=False)
+            email_record.status = 'sent'
             email_record.save()
-
-            # Send
-            try:
-                email_message.send(fail_silently=False)
-                email_record.status = 'sent'
-                email_record.save()
-                total_emails_sent += 1
-            except SMTPException:
-                email_record.statis = 'failed'
-                email_record.save()
-                total_emails_failed += 1
+            total_emails_sent += 1
+        except SMTPException:
+            email_record.statis = 'failed'
+            email_record.save()
+            total_emails_failed += 1
         return total_emails_sent
 
 class EmailRecord(models.Model):
@@ -160,7 +160,7 @@ class EmailRecord(models.Model):
     from_email = models.EmailField()
     reply_to_email = models.EmailField(blank=True)
     to_email = models.EmailField()
-    sender = models.ForeignKey(settings.AUTH_USER_MODEL)
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
     recipient = models.ForeignKey('Person')
     created_at = models.DateTimeField(auto_now_add=True)
     objects = EmailRecordManager()
@@ -190,7 +190,7 @@ class EmailTemplate(models.Model):
     message = RichTextField()
     objects = EmailTemplateManager()
 
-    def __unicode__(self):
+    def __str__(self):
         return u'{}'.format(self.subject)
 
     def _convert_inline_images(self, html_content):
@@ -217,7 +217,7 @@ class EmailTemplate(models.Model):
         t = Template(self.message)
         message = t.render(Context(extra_context))
         html_content, attachments = self._convert_inline_images(message)
-        txt_content = html2text(html_content.decode('utf-8'))
+        txt_content = html2text(html_content)
         for attachment in self.attachments.all():
             file_data = MIMEApplication(attachment.file.read())
             file_data.add_header('Content-Disposition', 'attachment', filename=attachment.name)

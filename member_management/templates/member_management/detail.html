@@ -5,9 +5,25 @@
 {{ person_form.media }}
 {% endblock %}
 
-
 {% block content %}
-
+<div class="row">
+  <div class="col-md-12">
+    <h3>User Info</h3>
+  </div>
+</div>
+{% if person.user %}
+<div class="row">
+  <div class="col-md-offset-1 col-md-11">
+    <p>Username: {{ person.user }}</p>
+  </div>
+</div>
+{% else %}
+<div class="row">
+  <div class="col-md-offset-1 col-md-11">
+    <p>This person has not yet created a user account.</p>
+  </div>
+</div>
+{% endif %}
 <div class="row">
   <div class="col-md-12">
     <form role="form" class="form-horizontal" action="" method="post">
@@ -53,6 +69,7 @@
       <a href="{% url 'memberpoint-grant' user_id=person.user.pk %}" role="button" class="btn btn-success">{% bootstrap_icon "plus" %} Grant</a>
       <a href="{% url 'memberpoint-consume' user_id=person.user.pk %}" role="button" class="btn btn-danger">{% bootstrap_icon "minus" %} Consume</a>
     </div>
+    <a href="{% url 'memberpoint-list' user_id=person.user.pk %}" role="button" class="btn btn-default">{% bootstrap_icon "th-list" %} List</a>
   </div>
 </div>
 {% else %}

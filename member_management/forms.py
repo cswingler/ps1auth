@@ -16,11 +16,10 @@ class mailform(forms.Form):
 
 class PersonForm(forms.ModelForm):
     class Meta:
-        fields = ['user', 'first_name', 'last_name', 'email', 'birthday',
+        fields = ['first_name', 'last_name', 'email', 'birthday',
                 'membership_status', 'membership_start_date', 'street_address',
                 'unit_number', 'city', 'state', 'zip_code', 'country']
         widgets = {
-                'user': forms.TextInput(attrs={'readonly':'readonly'}),
                 'membership_start_date': DateTimePicker(options={"format": "YYYY-MM-DD","pickTime":False}),
                 'birthday': DateTimePicker(options={"format": "YYYY-MM-DD","pickTime":False, "startDate":"1900"}),
         }

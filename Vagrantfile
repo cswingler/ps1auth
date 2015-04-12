@@ -14,7 +14,11 @@ export PAYPAL_RECEIVER_EMAIL="money@vagrant.lan"
 
 # Update the System
 #sudo pacman -Syu --noconfirm
-sudo pacman -Syy
+pacman -Syy
+pacman -S archlinux-keyring --noconfirm
+
+# Set Timezone
+timedatectl set-timezone America/Chicago
 
 # Setup locale.gen
 cat << EOF > /etc/locale.gen
@@ -24,7 +28,7 @@ EOF
 locale-gen
 
 # Install Dependencies 
-pacman -S --noconfirm --needed postgresql python2-virtualenv samba nginx
+pacman -S --noconfirm --needed postgresql samba nginx
 sudo -u vagrant yaourt -Sy --noconfirm --aur rabbitmq
 
 # Setup Samba
@@ -55,7 +59,7 @@ sudo -u vagrant createdb ps1auth
 
 # Bootstrap App
 
-sudo -u vagrant virtualenv2 venv
+sudo -u vagrant python -m venv venv
 sudo -u vagrant venv/bin/pip install -r /vagrant/requirements/local.txt
 sudo -u vagrant venv/bin/pip install gunicorn
 sudo -u vagrant -E venv/bin/python /vagrant/manage.py syncdb --noinput
@@ -164,8 +168,8 @@ systemctl start rabbitmq
 systemctl enable rabbitmq
 systemctl start celery
 systemctl enable celery
-sudo systemctl start systemd-journal-gatewayd.socket
-sudo systemctl enable systemd-journal-gatewayd.socket
+systemctl start systemd-journal-gatewayd.socket
+systemctl enable systemd-journal-gatewayd.socket
 
 SCRIPT
 

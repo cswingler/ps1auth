@@ -1,5 +1,5 @@
 Django==1.7.1
-python-ldap==2.4.10
+ldap3==0.9.7.2
 pytz==2013b
 psycopg2==2.5.1
 #django-money==0.4.1
