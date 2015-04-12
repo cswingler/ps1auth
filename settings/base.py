@@ -242,7 +242,8 @@ LOGIN_REDIRECT_URL = '/zinc/member_list'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-CELERY_RESULT_BACKEND = 'djcelery.backends.database:DatabaseBackend'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+BROKER_URL = 'redis://localhost:6379/0'
 
 
 SECRET_KEY = get_env_variable('SECRET_KEY')
