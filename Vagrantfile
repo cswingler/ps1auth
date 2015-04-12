@@ -28,8 +28,7 @@ EOF
 locale-gen
 
 # Install Dependencies 
-pacman -S --noconfirm --needed postgresql samba nginx
-sudo -u vagrant yaourt -Sy --noconfirm --aur rabbitmq
+pacman -S --noconfirm --needed postgresql samba nginx redis
 
 # Setup Samba
 samba-tool domain provision --realm=vagrant.lan --domain=${AD_DOMAIN} --server-role=dc --use-rfc2307 --adminpass=${AD_BINDDN_PASSWORD}
@@ -164,8 +163,8 @@ systemctl start ps1auth.socket
 systemctl enable ps1auth.socket
 systemctl start nginx
 systemctl enable nginx
-systemctl start rabbitmq
-systemctl enable rabbitmq
+systemctl start redis
+systemctl enable redis
 systemctl start celery
 systemctl enable celery
 systemctl start systemd-journal-gatewayd.socket
