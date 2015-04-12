@@ -1,32 +1,23 @@
-
 {% extends "base.html" %}
-{% load bootstrap_toolkit %}
+{% load bootstrap3  %}
 
 {% block extra_head %}
 {% endblock %}
 
-
 {% block content %}
-
 <div class="row">
-  <div class="span10">
-  <h2>{{ user }}'s Member Points</h2>
-  <ul>
-  {% for point in points %}
-  <li>Member Point of Awesome</li>
+  <div class="col-md-12">
+    <h2>{{ target_user.get_short_name }}'s Member Points</h2>
     <ul>
-      <li>Awarded on {{ point.created_on }}</li>
-      {% if point.reason %}<li>{{ point.reason }}</li>{% endif %}
+      {% for point in points %}
+      <li>Member Point awarded on {{ point.created_on }}</li>
+      <ul>
+        {% if point.reason %}<li>{{ point.reason }}</li>{% endif %}
+        {% if point.consumed_on %}<li>Consumed On {{ point.consumed_on }}</li>{% endif %}
+        {% if point.is_expired %}<li>Point Expired</li>{% endif %}
+      </ul>
+      {% endfor %}
     </ul>
-  {% endfor %}
-  </ul>
   </div>
 </div>
-
-<div class="row">
-  <div class="span10">
-  You have used {{ consumed_points.count }} point.
-  </div>
-</div>
-
 {% endblock %}

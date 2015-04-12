@@ -7,7 +7,6 @@ from accounts.models import PS1User
 #from .tokens import default_token_generator
 from .tokens import *
 from .backends import PS1Backend
-import ldap
 
 class PasswordResetForm(forms.Form):
     """ 

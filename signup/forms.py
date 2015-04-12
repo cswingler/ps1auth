@@ -1,16 +1,11 @@
-import ldap
-import ldap.modlist
+from django import forms
+from django.template import loader
 import re
 import uuid
-from django import forms
-from django.conf import settings
-from django.core.mail import send_mail
-from django.http import HttpResponseRedirect
-from django.template.loader import render_to_string
-from accounts.backends import PS1Backend, get_ldap_connection
 from accounts.models import PS1User
-from zoho_integration.models import Token
-from member_management.models import Person
+from member_management.models import Person, EmailRecord
+from .models import Token
+
 
 class activate_account_form(forms.Form):
     ps1_email = forms.EmailField(label="PS1 Email")
@@ -29,8 +24,8 @@ class activate_account_form(forms.Form):
     def save(self, use_https, domain):
         email_address = self.cleaned_data['ps1_email']
         # HEFTODO check email against AD
-        zoho_contact = Person.objects.get(email=email_address)
-        token = Token(token=uuid.uuid4(), zoho_contact=zoho_contact)
+        person = Person.objects.get(email=email_address)
+        token = Token(token=uuid.uuid4(), person=person)
         token.save()
         c = {
                 'email': email_address,
@@ -38,10 +33,17 @@ class activate_account_form(forms.Form):
                 'protocol': 'https' if use_https else 'http',
                 'domain': domain,
         }
-        subject = render_to_string("activation_email_subject.txt", c)
+        subject = loader.render_to_string("signup/activation_email_subject.txt", c)
         subject = ''.join(subject.splitlines())
-        body = render_to_string("activation_email_body.html", c)
-        send_mail(subject, body, "noreply@pumpingstationone.org", [email_address])
+        body = loader.render_to_string("signup/activation_email_body.txt", c)
+        EmailRecord.objects.send_email(
+            user=None,
+            from_email='noreply@pumpingstationone.org',
+            reply_to_email=None,
+            to_person=person,
+            subject=subject,
+            text_content=body,
+        )
 
 class account_register_form(forms.Form):
     preferred_username = forms.CharField()
@@ -52,12 +54,6 @@ class account_register_form(forms.Form):
 
     def clean_preferred_username(self):
         username = self.cleaned_data['preferred_username']
-        l = get_ldap_connection()
-        filter_string = '(sAMAccountName={0})'.format(username)
-        result = l.search_s(settings.AD_BASEDN, ldap.SCOPE_SUBTREE, filterstr=filter_string)
-        if result:
-            error_string = "A member is already using '{0}' as his or her username.".format(username)
-            raise forms.ValidationError(error_string)
 
         if not re.match(r"^[a-z][a-z0-9]{2,30}$", username):
             error_string = """Username must be all lower case,
@@ -65,6 +61,11 @@ class account_register_form(forms.Form):
             contain only letters and numbers,
             and be between 3 and 30 characters"""
             raise(forms.ValidationError(error_string))
+
+        users = PS1User.objects.get_users_by_field('sAMAccountName', username)
+        if len(users) > 0:
+            error_string = "A member is already using '{0}' as his or her username.".format(username)
+            raise forms.ValidationError(error_string)
 
         return username
 
@@ -82,8 +83,8 @@ class account_register_form(forms.Form):
         email = str(self.cleaned_data['preferred_email'])
         
         user = PS1User.objects.create_user(username, email=email, first_name=first_name, last_name=last_name)
-        token.zoho_contact.user = user
-        token.zoho_contact.save()
+        token.person.user = user
+        token.person.save()
         token.delete()
-
         return user
+

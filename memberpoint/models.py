@@ -31,7 +31,7 @@ class MemberPoint(models.Model):
     consumed_on = models.DateTimeField(null=True, blank=True)
     objects = MemberPointManager()
 
-    def __unicode__(self):
+    def __str__(self):
         return u'MemberPoint({}, {}, {}, {})'.format(
             self.owner,
             self.reason,
@@ -46,4 +46,8 @@ class MemberPoint(models.Model):
 
     def expiration_date(self):
         return self.created_on.replace(year = self.created_on.year + 1)
+
+    def is_expired(self):
+        now = timezone.now()
+        return not self.consumed_on and now.replace(now.year-1) > self.created_on 
 

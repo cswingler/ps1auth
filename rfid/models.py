@@ -17,7 +17,7 @@ class Resource(models.Model):
         except RFIDNumber.DoesNotExist:
             return False
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 class AdGroupResource(Resource):
@@ -36,6 +36,6 @@ class RFIDNumber(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL)
     ASCII_125khz = models.CharField(default = "", max_length=12, unique=True, verbose_name="RFID")
 
-    def __unicode__(self):
+    def __str__(self):
         return u'user={}, RFID={}'.format(self.user, self.ASCII_125khz)
 

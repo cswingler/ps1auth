@@ -1,0 +1,2 @@
+Your activation link is: 
+{{ protocol}}://{{ domain }}{% url 'signup.views.account_activate_confirm' token=token %}
