@@ -29,6 +29,7 @@ locale-gen
 
 # Install Dependencies 
 pacman -S --noconfirm --needed postgresql samba nginx
+sudo -u vagrant gpg --keyserver pgpkeys.mit.edu --recv-key F7B8CEA6056E8E56
 sudo -u vagrant yaourt -Sy --noconfirm --aur rabbitmq
 
 # Setup Samba
