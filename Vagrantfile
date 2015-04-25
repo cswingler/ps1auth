@@ -5,7 +5,7 @@ $script = <<SCRIPT
 # Set Environment Variables
 export AD_URL="ldap://freeipa.example.org"
 export AD_DOMAIN="EXAMPLE.ORG"
-export AD_BASEDN="CN=Users,DC=example,DC=org"
+export AD_BASEDN="cn=users,cn=accounts,dc=example,dc=org"
 export AD_BINDDN='uid=admin,cn=users,cn=accounts,dc=example,dc=org'
 export AD_BINDDN_PASSWORD="password"
 export SECRET_KEY="deesohshoayie6PiGoGaghi6thiecaingai2quab2aoheequ8vahsu1phu8ahJio"
